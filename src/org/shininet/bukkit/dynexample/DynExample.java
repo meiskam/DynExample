@@ -6,6 +6,7 @@ package org.shininet.bukkit.dynexample;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Set;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -46,8 +47,9 @@ public class DynExample extends JavaPlugin {
 			}			
 		} else if (cmd.getName().equalsIgnoreCase("unregister")) {
 			if (args.length == 1) {
-				if (unregister(args[0])) {
-					sender.sendMessage("Successfully unregistered: "+args[0]);
+				Set<String> unreg = unregister(args[0]);
+				if (unreg != null) {
+					sender.sendMessage("Successfully unregistered: "+implode(unreg, ", "));
 					return true;
 				} else {
 					sender.sendMessage("Could not unregister: "+args[0]);
@@ -58,32 +60,44 @@ public class DynExample extends JavaPlugin {
 				return true;
 			}
 		} else {
-			sender.sendMessage("[DynExample] You used command: "+cmd.getName()+" ("+commandLabel+")"+((args.length>0)?": "+implode(args, " "):""));
+			sender.sendMessage("[DynExample] You used command: "+cmd.getLabel()+" ("+commandLabel+")"+((args.length>0)?": "+implode(args, " "):""));
 			return true;
 		}
 	}
 	
 	private String register(PluginCommand command) {
 		if (command != null) {
-			map.put(command.getName().toLowerCase(), command);
-			return command.getName();
+			map.put(command.getLabel(), command);
+			return command.getLabel();
 		}
 		return null;
 	}
 	
-	private boolean unregister(String name) {
+	private Set<String> unregister(String name) {
 		String nameLC = name.toLowerCase();
+		Set<String> output = null;
 		if (map.containsKey(nameLC)) {
 			PluginCommand command = map.get(nameLC);
-			if (DynamicCommand.unregister(command)) {
+			output = DynamicCommand.unregister(command);
+			if (output != null) {
 				map.remove(nameLC);
-				return true;
+				return output;
 			}
 		}
-		return false;
+		return null;
 	}
-		
+	
 	public static String implode(String[] input, String glue) {
+		int i = 0;
+		StringBuilder output = new StringBuilder();
+		for (String key : input) {
+			if (i++ != 0) output.append(glue);
+			output.append(key);
+		}
+		return output.toString();
+	}
+	
+	public static String implode(Iterable<String> input, String glue) {
 		int i = 0;
 		StringBuilder output = new StringBuilder();
 		for (String key : input) {

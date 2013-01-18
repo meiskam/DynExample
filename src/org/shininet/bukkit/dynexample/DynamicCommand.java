@@ -6,12 +6,16 @@ package org.shininet.bukkit.dynexample;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandMap;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.command.SimpleCommandMap;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.SimplePluginManager;
 
@@ -19,10 +23,13 @@ import org.bukkit.plugin.SimplePluginManager;
  * @author meiskam
  */
 
+@SuppressWarnings("unchecked")
 public class DynamicCommand {
 
-	private static CommandMap commandMap = null;
-	private static Constructor<PluginCommand> constructor = null;
+	private static SimpleCommandMap commandMap;
+	private static Map<String, Command> knownCommands;
+	private static Set<String> aliases;
+	private static Constructor<PluginCommand> constructor;
 	public static final boolean enabled;
 
 	private DynamicCommand() {}
@@ -30,21 +37,23 @@ public class DynamicCommand {
 	static {
 		boolean cont = true;
 		try {
-			Field field = SimplePluginManager.class.getDeclaredField("commandMap");
-			field.setAccessible(true);
-			commandMap = (CommandMap)(field.get(Bukkit.getServer().getPluginManager()));
-		} catch(Exception e) {
+			Field fieldCommandMap = SimplePluginManager.class.getDeclaredField("commandMap");
+			fieldCommandMap.setAccessible(true);
+			commandMap = (SimpleCommandMap)(fieldCommandMap.get(Bukkit.getServer().getPluginManager()));
+			
+			Field fieldKnownCommands = SimpleCommandMap.class.getDeclaredField("knownCommands");
+			fieldKnownCommands.setAccessible(true);
+			knownCommands = (Map<String, Command>) fieldKnownCommands.get(commandMap);
+			
+			Field fieldAliases = SimpleCommandMap.class.getDeclaredField("aliases");
+			fieldAliases.setAccessible(true);
+			aliases = (Set<String>) fieldAliases.get(commandMap);
+			
+			constructor = PluginCommand.class.getDeclaredConstructor(String.class, Plugin.class);
+			constructor.setAccessible(true);
+		} catch (Exception e) {
 			e.printStackTrace();
 			cont = false;
-		}
-		if (cont) {
-			try {
-				constructor = PluginCommand.class.getDeclaredConstructor(String.class, Plugin.class);
-				constructor.setAccessible(true);
-			} catch (Exception e) {
-				e.printStackTrace();
-				cont = false;
-			}
 		}
 		enabled = cont;
 	}
@@ -72,7 +81,7 @@ public class DynamicCommand {
 				if (aliases != null) {
 					command.setAliases(aliases);
 				}
-				commandMap.register("_", command);
+				commandMap.register("", command);
 				return (PluginCommand)command;
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -81,11 +90,24 @@ public class DynamicCommand {
 		return null;
 	}
 	
-	public static boolean unregister(Command command) {
+	public static Set<String> unregister(Command command) {
 		if (enabled) {
-			return command.unregister(commandMap);
-		} else {
-			return false;
+			Set<String> output = new HashSet<String>();
+			
+			for (Iterator<String> it = knownCommands.keySet().iterator(); it.hasNext(); ) {
+				String key = it.next();
+				Command value = knownCommands.get(key);
+				if (value.equals(command)) {
+					it.remove();
+					aliases.remove(key);
+					output.add(key);
+				}
+			}
+			
+			if ((command.unregister(commandMap)) && (output.size() > 0)) {
+				return output;
+			}
 		}
+		return null;
 	}
 }
