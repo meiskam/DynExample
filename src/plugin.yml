@@ -1,0 +1,8 @@
+name: DynExample
+version: 0.1.0003
+description: An example of creating commands dynamically
+author: meiskam
+
+main: org.shininet.bukkit.dynexample.DynExample
+database: false
+
