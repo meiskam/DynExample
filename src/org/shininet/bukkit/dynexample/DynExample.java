@@ -25,6 +25,10 @@ public class DynExample extends JavaPlugin {
 	public void onEnable(){
 		register(DynamicCommand.getCommand(this, "register"));
 		register(DynamicCommand.getCommand(this, "unregister"));
+		
+		PluginCommand foobarCommand = DynamicCommand.getCommand(this, "foobar", Arrays.asList("beefcake", "deadbabe"));
+		register(foobarCommand);
+		foobarCommand.setExecutor(new DynExampleCommandExecutor());
 	}
 	
 	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args) {
